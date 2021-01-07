@@ -5,5 +5,6 @@ CREATE TABLE environment_data
         `temp` DECIMAL(10,2) NOT NULL , 
         `pressure` DECIMAL(10,2) NOT NULL , 
         `humidity` DECIMAL(10,2) NOT NULL , 
-        `air_quality` DECIMAL(20,2) NULL
+        `air_quality` DECIMAL(20,2) NULL ,
+        `light` DECIMAL(10,2) NULL
     );
