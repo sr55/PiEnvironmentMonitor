@@ -1,0 +1,23 @@
+- SD card creation:
+    Add file "ssh"
+    Add file "wpa_supplicant.conf"
+        country=GB
+        ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+        update_config=1
+        network={
+            ssid="Your SSID"
+            psk="YourWPAPassword"
+            key_mgmt=WPA-PSK
+        }
+
+- Initial Debian Setup
+
+    passwd
+    sudo passwd root
+    sudo apt-get update
+    sudo apt-get upgrade
+    sudo apt-get install python3-pip
+    sudo pip3 install bme680 mysql-connector-python smbus veml6075 ltr559 picamera
+
+    sudo raspi-config     
+        + Interfacing Options -> (Enable i2c)
