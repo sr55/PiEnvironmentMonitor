@@ -8,12 +8,7 @@ from ltr559 import LTR559
 from picamera import PiCamera
 
 ## Dependencies
-#  pip3 install bme680
-#  pip3 install mysql-connector-python
-#  pip3 install smbus
-#  pip3 install veml6075
-#  pip3 install ltr559
-#  pip3 install picamera
+#  pip3 install bme680 mysql-connector-python smbus veml6075 ltr559 picamera
 
 # ------------------------------------------------------------
 # Config 
@@ -38,9 +33,10 @@ db_port = 3306
 def connectToMySQL():
     try:
         global dbConn 
-        dbConn = mysql.connector.connect(host=db_host, user=db_user, passwd=db_pwd, db=db_schema, port=db_port)
+        dbConn = mysql.connector.connect(host=db_host, user=db_user, passwd=db_pwd, db=db_schema, port=db_port, connection_timeout=10)
         global dbCur 
         dbCur = dbConn.cursor()
+        dbCur.execute('SET SESSION sql_mode = ""')
         return True;
     except Exception as e: 
         print(" - Unable to Connect to MySQL. Check connection Details!")
@@ -101,11 +97,14 @@ if camera_enabled:
     print(' - Camera [OK]')
 
 print(' - Polling Interval: {0}'.format(polling_interval))
+print(' - Room: ' + room)
    
 # Start Logging environment data
 print('\n\nSensor Data: \n')
 try:
+    gas_sensor_delay = 0
     while True:
+        gas_sensor_delay = gas_sensor_delay + polling_interval
         now = datetime.now()
         dateTime = now.strftime('%Y-%m-%d %H:%M:%S')
         dateTimeHuman = now.strftime('%d/%m/%Y %H:%M:%S')
@@ -116,15 +115,18 @@ try:
             camera.capture('/home/pi/images/' +dateTime+'.jpg')
             camera.stop_preview()
         
-        lux = 0;
+        lux = None;
         if ltr559_enabled:
             ltr559.update_sensor()
             lux = ltr559.get_lux()
        
         if sensor.get_sensor_data():
-            output = '{0},     {1:.2f} C,     {2:.2f} hPa,     {3:.2f} %RH    {4:06.2f} Lux'.format(dateTimeHuman, sensor.data.temperature, sensor.data.pressure, sensor.data.humidity, lux)
+            if lux == None:
+                output = '{0},     {1:.2f} C,     {2:.2f} hPa,     {3:.2f} %RH'.format(dateTimeHuman, sensor.data.temperature, sensor.data.pressure, sensor.data.humidity)
+            else:
+                output = '{0},     {1:.2f} C,     {2:.2f} hPa,     {3:.2f} %RH    {4:06.2f} Lux'.format(dateTimeHuman, sensor.data.temperature, sensor.data.pressure, sensor.data.humidity, lux)
 
-            if sensor.data.heat_stable:
+            if sensor.data.heat_stable and gas_sensor_delay > 120 : # Wait 2 minutes for the gas sensor to stabalise.
                 print('{0},     {1:.0f} AQ Ohms'.format(output, sensor.data.gas_resistance))
                 sql = "INSERT INTO environment_data (room, datetime, temp, pressure, humidity, air_quality, light) VALUES (%s, %s, %s, %s, %s, %s, %s)"
                 query_data = (room, dateTime, sensor.data.temperature, sensor.data.pressure, sensor.data.humidity, sensor.data.gas_resistance, lux)
@@ -132,7 +134,6 @@ try:
                 sql = "INSERT INTO environment_data (room, datetime, temp, pressure, humidity, light) VALUES (%s, %s, %s, %s, %s, %s)"
                 query_data = (room, dateTime, sensor.data.temperature, sensor.data.pressure, sensor.data.humidity, lux)
                 print(output)
-        
         
             try:
                 if db_enabled:
