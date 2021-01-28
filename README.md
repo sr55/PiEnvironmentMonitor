@@ -30,3 +30,7 @@ Available under MIT.
 Schema is located in install.sql
 
 
+### Thanks
+[pimoroni Library and Examples ](https://github.com/pimoroni/bme680-python)
+
+
